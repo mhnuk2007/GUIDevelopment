@@ -1,5 +1,5 @@
 package Swing;
-
+// 2. JPanel, JLabel, JButton
 import javax.swing.*;
 
 public class LableButtonExample {

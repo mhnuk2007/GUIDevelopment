@@ -1,5 +1,5 @@
 package Swing;
-
+// 1. JFrame – The Main Window
 import javax.swing.*;
 
 public class MyFirstFrame {

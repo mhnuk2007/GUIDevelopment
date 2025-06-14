@@ -1,5 +1,5 @@
 package Swing;
-
+// 3. JTextField, JTextArea, JPasswordField
 import javax.swing.*;
 
 public class TextInputExample {
