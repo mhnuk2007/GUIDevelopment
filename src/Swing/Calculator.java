@@ -2,132 +2,154 @@ package Swing;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 
 public class Calculator {
 
-    // Stores first operand
     private static double num1 = 0;
-
-    // Stores the selected operator (+, -, *, /)
     private static String operator = "";
-
-    // Flag to check if operator was just clicked
     private static boolean isOperatorClicked = false;
 
     public static void main(String[] args) {
 
-        // Create main calculator frame
+        // Create frame
         JFrame frame = new JFrame("Calculator");
         frame.setSize(300, 400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLocationRelativeTo(null); // Center the frame
+        frame.setLocationRelativeTo(null);
 
         // Create display field
         JTextField display = new JTextField();
         display.setFont(new Font("Arial", Font.PLAIN, 24));
         display.setHorizontalAlignment(JTextField.RIGHT);
-        display.setEditable(false); // User cannot type directly
+        display.setEditable(false);
 
-        // Create panel with grid layout: 5 rows, 4 columns, with 5px gaps
-        JPanel panel = new JPanel(new GridLayout(5, 4, 5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add padding
-
-        // Calculator button labels
+        // Button labels
         String[] buttons = {
                 "7", "8", "9", "/",
                 "4", "5", "6", "*",
                 "1", "2", "3", "-",
                 "0", ".", "C", "=",
-                "+" // This row will have 1 less button, grid auto adjusts
+                "+" // one extra button will fit automatically
         };
 
-        // Create and add buttons to panel
+        // Create panel
+        JPanel panel = new JPanel(new GridLayout(5, 4, 5, 5));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Create buttons and add to panel
         for (String text : buttons) {
             JButton button = new JButton(text);
             button.setFont(new Font("Arial", Font.BOLD, 20));
             panel.add(button);
 
-            // Add ActionListener to handle clicks
-            button.addActionListener(e -> {
-                String value = e.getActionCommand();
+            button.addActionListener(e -> processInput(display, e.getActionCommand()));
+        }
 
-                switch (value) {
-                    case "C":
-                        // Clear display and reset all state
-                        display.setText("");
-                        operator = "";
-                        num1 = 0;
-                        isOperatorClicked = false;
-                        break;
+        // Add keyboard support
+        addKeyBindings(frame, display);
 
-                    case "+": case "-": case "*": case "/":
-                        // Store first number and selected operator
-                        if (!display.getText().isEmpty()) {
-                            num1 = Double.parseDouble(display.getText());
-                            operator = value;
-                            isOperatorClicked = true;
-                        }
-                        break;
+        // Layout
+        frame.setLayout(new BorderLayout(10, 10));
+        frame.add(display, BorderLayout.NORTH);
+        frame.add(panel, BorderLayout.CENTER);
+        frame.setVisible(true);
 
-                    case "=":
-                        // Perform calculation and show result
-                        if (!display.getText().isEmpty() && !operator.isEmpty()) {
-                            double num2 = Double.parseDouble(display.getText());
-                            double result = calculate(num1, num2, operator);
-                            display.setText(String.valueOf(result));
+        // Request focus for key bindings to work
+        SwingUtilities.invokeLater(display::requestFocusInWindow);
+    }
 
-                            // Reset after calculation
-                            operator = "";
-                            isOperatorClicked = false;
-                        }
-                        break;
+    // Process logic for button and keyboard input
+    private static void processInput(JTextField display, String value) {
+        switch (value) {
+            case "C":
+                display.setText("");
+                operator = "";
+                num1 = 0;
+                isOperatorClicked = false;
+                break;
 
-                    case ".":
-                        // Allow only one decimal point
-                        if (!display.getText().contains(".")) {
-                            display.setText(display.getText() + ".");
-                        }
-                        break;
+            case "+": case "-": case "*": case "/":
+                if (!display.getText().isEmpty()) {
+                    num1 = Double.parseDouble(display.getText());
+                    operator = value;
+                    isOperatorClicked = true;
+                }
+                break;
 
-                    default:
-                        // Append digits to display
-                        if (isOperatorClicked) {
-                            display.setText(""); // Clear for new number
-                            isOperatorClicked = false;
-                        }
-                        display.setText(display.getText() + value);
-                        break;
+            case "=":
+                if (!display.getText().isEmpty() && !operator.isEmpty()) {
+                    double num2 = Double.parseDouble(display.getText());
+                    double result = calculate(num1, num2, operator);
+                    display.setText(String.valueOf(result));
+                    operator = "";
+                    isOperatorClicked = false;
+                }
+                break;
+
+            case ".":
+                if (!display.getText().contains(".")) {
+                    display.setText(display.getText() + ".");
+                }
+                break;
+
+            default: // digits
+                if (isOperatorClicked) {
+                    display.setText("");
+                    isOperatorClicked = false;
+                }
+                display.setText(display.getText() + value);
+                break;
+        }
+    }
+
+    // Add keyboard key bindings
+    private static void addKeyBindings(JFrame frame, JTextField display) {
+        JPanel root = (JPanel) frame.getContentPane();
+        InputMap im = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = root.getActionMap();
+
+        String keys = "0123456789.+-*/=cC\n\r";
+        for (char c : keys.toCharArray()) {
+            im.put(KeyStroke.getKeyStroke(c), "pressed_" + c);
+            am.put("pressed_" + c, new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    switch (c) {
+                        case '\n': case '\r': processInput(display, "="); break; // Enter
+                        case 'c': case 'C': processInput(display, "C"); break;
+                        default: processInput(display, String.valueOf(c));
+                    }
                 }
             });
         }
 
-        // Set frame layout and add components
-        frame.setLayout(new BorderLayout(10, 10));
-        frame.add(display, BorderLayout.NORTH);
-        frame.add(panel, BorderLayout.CENTER);
-
-        // Show the calculator window
-        frame.setVisible(true);
+        // Support backspace to delete last digit
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SPACE, 0), "backspace");
+        am.put("backspace", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String text = display.getText();
+                if (!text.isEmpty()) {
+                    display.setText(text.substring(0, text.length() - 1));
+                }
+            }
+        });
     }
 
-    // Performs the arithmetic calculation
+    // Perform calculation
     private static double calculate(double a, double b, String op) {
         switch (op) {
-            case "+":
-                return a + b;
-            case "-":
-                return a - b;
-            case "*":
-                return a * b;
+            case "+": return a + b;
+            case "-": return a - b;
+            case "*": return a * b;
             case "/":
                 if (b == 0) {
-                    // Handle division by zero error
                     JOptionPane.showMessageDialog(null, "Division by zero", "Error", JOptionPane.ERROR_MESSAGE);
                     return 0;
                 }
                 return a / b;
-            default:
-                return 0;
+            default: return 0;
         }
     }
 }
